@@ -1,0 +1,12 @@
+package com.example.deliveryfeeservice.exception;
+
+public class WeatherDataFetchException extends RuntimeException {
+
+    public WeatherDataFetchException(String message) {
+        super(message);
+    }
+
+    public WeatherDataFetchException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}

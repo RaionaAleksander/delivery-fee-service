@@ -21,6 +21,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.example.deliveryfeeservice.exception.WeatherDataFetchException;
 import com.example.deliveryfeeservice.model.City;
 import com.example.deliveryfeeservice.model.Weather;
 import com.example.deliveryfeeservice.repository.WeatherRepository;
@@ -89,7 +90,7 @@ public class WeatherService {
                         .build());
             }
         } catch (IOException | ParserConfigurationException | SAXException e) {
-            e.printStackTrace();
+            throw new WeatherDataFetchException("Failed to fetch or parse weather data", e);
         }
     }
 
