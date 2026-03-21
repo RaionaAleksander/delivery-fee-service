@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/delivery-fee")
-public class DeliveryFeeController {
+class DeliveryFeeController {
 
     private final DeliveryFeeService deliveryFeeService;
     private final CityService cityService;
@@ -30,7 +30,7 @@ public class DeliveryFeeController {
             @ApiResponse(responseCode = "403", description = "Vehicle usage forbidden due to weather conditions")
     })
     @GetMapping
-    public double calculateFee(
+    double calculateFee(
             @Parameter(description = "City name (Tallinn, Tartu, Parnu)") @RequestParam String city,
 
             @Parameter(description = "Vehicle type (Car, Scooter, Bike)") @RequestParam String vehicle) {
@@ -40,10 +40,9 @@ public class DeliveryFeeController {
         VehicleType vehicleEnum;
         try {
             vehicleEnum = VehicleType.valueOf(vehicle.toUpperCase());
-        } catch (Exception e) {
+            return deliveryFeeService.calculate(cityEnum, vehicleEnum);
+        } catch (IllegalArgumentException e) {
             throw new InvalidVehicleTypeException("Invalid vehicle type");
         }
-
-        return deliveryFeeService.calculate(cityEnum, vehicleEnum);
     }
 }
