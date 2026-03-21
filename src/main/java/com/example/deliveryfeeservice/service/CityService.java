@@ -4,19 +4,20 @@ import java.text.Normalizer;
 
 import org.springframework.stereotype.Service;
 
+import com.example.deliveryfeeservice.exception.InvalidCityException;
 import com.example.deliveryfeeservice.model.City;
 
 @Service
 public class CityService {
     public City parseCity(String input) {
         if (input == null || input.isBlank()) {
-            throw new IllegalArgumentException("Invalid city");
+            throw new InvalidCityException("Invalid city");
         }
 
         try {
             return City.valueOf(normalize(input));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid city");
+            throw new InvalidCityException("Invalid city");
         }
     }
 

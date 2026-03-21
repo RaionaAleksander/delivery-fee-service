@@ -2,6 +2,7 @@ package com.example.deliveryfeeservice.controller;
 
 import org.springframework.web.bind.annotation.*;
 
+import com.example.deliveryfeeservice.exception.InvalidVehicleTypeException;
 import com.example.deliveryfeeservice.model.City;
 import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.service.DeliveryFeeService;
@@ -40,7 +41,7 @@ public class DeliveryFeeController {
         try {
             vehicleEnum = VehicleType.valueOf(vehicle.toUpperCase());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid vehicle type");
+            throw new InvalidVehicleTypeException("Invalid vehicle type");
         }
 
         return deliveryFeeService.calculate(cityEnum, vehicleEnum);

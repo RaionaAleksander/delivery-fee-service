@@ -2,6 +2,8 @@ package com.example.deliveryfeeservice.service;
 
 import org.springframework.stereotype.Service;
 
+import com.example.deliveryfeeservice.exception.VehicleForbiddenException;
+import com.example.deliveryfeeservice.exception.WeatherDataNotFoundException;
 import com.example.deliveryfeeservice.model.City;
 import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.model.Weather;
@@ -25,7 +27,7 @@ public class DeliveryFeeService {
         Optional<Weather> latestWeatherOpt = weatherRepository.findTopByCityOrderByTimestampDesc(city);
 
         Weather latestWeather = latestWeatherOpt
-                .orElseThrow(() -> new IllegalStateException("No weather data available for city: " + city));
+                .orElseThrow(() -> new WeatherDataNotFoundException("No weather data available for city: " + city));
 
         double baseFee = getRegionalBaseFee(city, vehicle);
 
@@ -74,7 +76,7 @@ public class DeliveryFeeService {
 
         double wind = weather.getWindSpeed();
         if (wind > 20)
-            throw new IllegalStateException(WIND_FORBIDDEN);
+            throw new VehicleForbiddenException(WIND_FORBIDDEN);
         if (wind >= 10)
             return 0.5;
         return 0.0;
@@ -90,7 +92,7 @@ public class DeliveryFeeService {
 
         String p = phenomenon.toLowerCase();
         if (p.contains("glaze") || p.contains("hail") || p.contains("thunder")) {
-            throw new IllegalStateException(PHENOMENON_FORBIDDEN);
+            throw new VehicleForbiddenException(PHENOMENON_FORBIDDEN);
         }
         if (p.contains("snow") || p.contains("sleet"))
             return 1.0;

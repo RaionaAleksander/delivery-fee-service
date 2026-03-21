@@ -3,6 +3,8 @@ package com.example.deliveryfeeservice.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.example.deliveryfeeservice.exception.VehicleForbiddenException;
+import com.example.deliveryfeeservice.exception.WeatherDataNotFoundException;
 import com.example.deliveryfeeservice.model.City;
 import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.model.Weather;
@@ -85,7 +87,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.PARNU))
                 .thenReturn(Optional.of(weather));
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class,
+        VehicleForbiddenException exception = assertThrows(VehicleForbiddenException.class,
                 () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE));
         assertEquals("Vehicle usage forbidden due to strong wind", exception.getMessage());
     }
@@ -162,7 +164,8 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TARTU))
                 .thenReturn(Optional.empty());
 
-        assertThrows(IllegalStateException.class, () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE));
+        assertThrows(WeatherDataNotFoundException.class,
+                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE));
     }
 
     // 8.
@@ -182,7 +185,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TALLINN))
                 .thenReturn(Optional.of(weather));
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(VehicleForbiddenException.class,
                 () -> deliveryFeeService.calculate(City.TALLINN, VehicleType.SCOOTER));
     }
 
@@ -202,7 +205,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TARTU))
                 .thenReturn(Optional.of(weather));
 
-        assertThrows(IllegalStateException.class, () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE));
+        assertThrows(VehicleForbiddenException.class, () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE));
     }
 
     // 10.
@@ -222,6 +225,6 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.PARNU))
                 .thenReturn(Optional.of(weather));
 
-        assertThrows(IllegalStateException.class, () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE));
+        assertThrows(VehicleForbiddenException.class, () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE));
     }
 }

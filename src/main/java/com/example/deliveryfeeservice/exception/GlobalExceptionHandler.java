@@ -11,19 +11,30 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, Object>> handleForbidden(IllegalStateException ex) {
+    @ExceptionHandler(VehicleForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(VehicleForbiddenException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                 "timestamp", LocalDateTime.now(),
                 "status", HttpStatus.FORBIDDEN.value(),
                 "error", ex.getMessage()));
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException ex) {
+    @ExceptionHandler({
+            InvalidCityException.class,
+            InvalidVehicleTypeException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                 "timestamp", LocalDateTime.now(),
                 "status", HttpStatus.BAD_REQUEST.value(),
+                "error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(WeatherDataNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(WeatherDataNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "timestamp", LocalDateTime.now(),
+                "status", HttpStatus.NOT_FOUND.value(),
                 "error", ex.getMessage()));
     }
 }
