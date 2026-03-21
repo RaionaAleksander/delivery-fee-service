@@ -71,7 +71,41 @@ DeliveryFeeServiceApplication.java
 
 * JDBC URL: `jdbc:h2:file:./data/weather-db`
 * Username: `sa`
-* Password: `password`
+* Password: 
+
+---
+
+## Running Tests
+
+This project includes both unit and integration tests to ensure the correctness of business logic and API behavior.
+
+Tests are executed against an in-memory H2 database.
+
+### Run all tests
+
+Using Maven:
+
+```bash
+mvn test
+```
+
+Or using Maven Wrapper:
+
+```bash
+./mvnw test
+```
+
+### Test types
+
+* **Unit tests** — verify business logic in isolation (e.g., delivery fee calculation)
+* **Integration tests** — verify full request-response flow including database interaction
+
+### Technologies used
+
+* JUnit 5
+* Mockito
+* Spring Boot Test
+* MockMvc
 
 ---
 
