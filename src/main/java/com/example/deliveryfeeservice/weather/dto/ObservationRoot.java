@@ -1,4 +1,4 @@
-package com.example.deliveryfeeservice.service.weather.dto;
+package com.example.deliveryfeeservice.weather.dto;
 
 import java.util.List;
 

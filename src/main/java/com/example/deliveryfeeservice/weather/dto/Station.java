@@ -1,4 +1,4 @@
-package com.example.deliveryfeeservice.service.weather.dto;
+package com.example.deliveryfeeservice.weather.dto;
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
