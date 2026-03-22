@@ -1,0 +1,24 @@
+spring:
+  task:
+    scheduling:
+      enabled: false
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+logging:
+  level:
+    root: WARN
+
+weather:
+  api:
+    url: "https://www.ilmateenistus.ee/ilma_andmed/xml/observations.php"
+  fetch:
+    cron: '0 */5 * * * *'

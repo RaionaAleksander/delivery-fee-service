@@ -9,9 +9,9 @@ import com.example.deliveryfeeservice.service.weather.WeatherDataFetcher;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 @Service
-public class WeatherService {
+@RequiredArgsConstructor
+class WeatherService {
 
     private final WeatherDataFetcher fetcher;
 
@@ -19,7 +19,7 @@ public class WeatherService {
     private String apiUrl;
 
     @PostConstruct
-    public void init() {
+    void init() {
         fetcher.fetchAndStore(apiUrl);
     }
 
