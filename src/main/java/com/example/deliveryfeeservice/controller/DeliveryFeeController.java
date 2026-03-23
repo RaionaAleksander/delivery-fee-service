@@ -1,5 +1,8 @@
 package com.example.deliveryfeeservice.controller;
 
+import java.time.LocalDateTime;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.deliveryfeeservice.exception.InvalidVehicleTypeException;
@@ -33,14 +36,16 @@ class DeliveryFeeController {
     double calculateFee(
             @Parameter(description = "City name (Tallinn, Tartu, Parnu)") @RequestParam String city,
 
-            @Parameter(description = "Vehicle type (Car, Scooter, Bike)") @RequestParam String vehicle) {
+            @Parameter(description = "Vehicle type (Car, Scooter, Bike)") @RequestParam String vehicle,
+
+            @Parameter(description = "Optional datetime (ISO format: 2024-01-10T12:00)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime datetime) {
 
         City cityEnum = cityService.parseCity(city);
 
         VehicleType vehicleEnum;
         try {
             vehicleEnum = VehicleType.valueOf(vehicle.toUpperCase());
-            return deliveryFeeService.calculate(cityEnum, vehicleEnum);
+            return deliveryFeeService.calculate(cityEnum, vehicleEnum, datetime);
         } catch (IllegalArgumentException e) {
             throw new InvalidVehicleTypeException("Invalid vehicle type");
         }

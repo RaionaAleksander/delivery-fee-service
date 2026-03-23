@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 class DeliveryFeeServiceTest {
@@ -44,7 +45,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TARTU))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE);
+        double fee = deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null);
         assertEquals(2.5, fee);
     }
 
@@ -66,7 +67,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TALLINN))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.SCOOTER);
+        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.SCOOTER, null);
         assertEquals(4.0, fee); // 3.5 base + 0.5 temp
     }
 
@@ -88,7 +89,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.of(weather));
 
         VehicleForbiddenException exception = assertThrows(VehicleForbiddenException.class,
-                () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE));
+                () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE, null));
         assertEquals("Vehicle usage forbidden due to strong wind", exception.getMessage());
     }
 
@@ -108,7 +109,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TARTU))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE);
+        double fee = deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null);
         assertEquals(4.0, fee); // 2.5 base + 0.5 temp + 1 snow
     }
 
@@ -129,7 +130,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TALLINN))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.CAR);
+        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.CAR, null);
 
         assertEquals(4.0, fee);
     }
@@ -150,7 +151,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.PARNU))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.PARNU, VehicleType.SCOOTER);
+        double fee = deliveryFeeService.calculate(City.PARNU, VehicleType.SCOOTER, null);
 
         assertEquals(3.0, fee); // 2.5 base + 0.5 rain
     }
@@ -165,7 +166,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(WeatherDataNotFoundException.class,
-                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE));
+                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null));
     }
 
     // 8.
@@ -186,7 +187,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.of(weather));
 
         assertThrows(VehicleForbiddenException.class,
-                () -> deliveryFeeService.calculate(City.TALLINN, VehicleType.SCOOTER));
+                () -> deliveryFeeService.calculate(City.TALLINN, VehicleType.SCOOTER, null));
     }
 
     // 9.
@@ -205,7 +206,8 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TARTU))
                 .thenReturn(Optional.of(weather));
 
-        assertThrows(VehicleForbiddenException.class, () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE));
+        assertThrows(VehicleForbiddenException.class,
+                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null));
     }
 
     // 10.
@@ -225,6 +227,131 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.PARNU))
                 .thenReturn(Optional.of(weather));
 
-        assertThrows(VehicleForbiddenException.class, () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE));
+        assertThrows(VehicleForbiddenException.class,
+                () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE, null));
+    }
+
+    // 11.
+    /**
+     * Verifies that when a datetime is provided, the service retrieves weather
+     * data using the timestamp-based query and calculates the fee accordingly.
+     */
+    @Test
+    void testCalculateUsesDatetimeQuery() {
+        LocalDateTime time = LocalDateTime.of(2026, 3, 23, 12, 0);
+
+        Weather weather = new Weather();
+        weather.setCity(City.TALLINN);
+        weather.setTemperature(5.0);
+        weather.setWindSpeed(2.0);
+        weather.setPhenomenon(null);
+        weather.setTimestamp(time.minusMinutes(5));
+
+        when(weatherRepository
+                .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(City.TALLINN, time))
+                .thenReturn(Optional.of(weather));
+
+        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.CAR, time);
+
+        assertEquals(4.0, fee); // base only
+
+        verify(weatherRepository)
+                .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(City.TALLINN, time);
+    }
+
+    // 12.
+    /**
+     * Verifies that an exception is thrown when no weather data is available
+     * for the given city before the specified datetime.
+     */
+    @Test
+    void testNoWeatherDataForDatetime() {
+        LocalDateTime time = LocalDateTime.of(2026, 3, 23, 12, 0);
+
+        when(weatherRepository
+                .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(City.TARTU, time))
+                .thenReturn(Optional.empty());
+
+        assertThrows(WeatherDataNotFoundException.class,
+                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, time));
+    }
+
+    // 13.
+    /**
+     * Verifies that the exception message includes the requested datetime
+     * when no weather data is found for the specified time.
+     */
+    @Test
+    void testErrorMessageContainsDatetime() {
+        LocalDateTime time = LocalDateTime.of(2026, 3, 23, 12, 0);
+
+        when(weatherRepository
+                .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(City.TARTU, time))
+                .thenReturn(Optional.empty());
+
+        Exception ex = assertThrows(WeatherDataNotFoundException.class,
+                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, time));
+
+        String expectedDate = time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        assertTrue(ex.getMessage().contains("before " + expectedDate));
+    }
+
+    // 14.
+    /**
+     * Verifies that delivery fee calculation correctly depends on weather data
+     * at different timestamps for the same city. Ensures that the latest available
+     * weather record before or at the requested time is used.
+     */
+    @Test
+    void testCalculateFeeWithDifferentTimestamps() {
+        City city = City.TARTU;
+
+        LocalDateTime t1 = LocalDateTime.of(2026, 3, 23, 12, 0);
+        LocalDateTime t2 = t1.plusMinutes(5);
+        LocalDateTime t3 = t1.plusMinutes(10);
+
+        Weather w1 = new Weather();
+        w1.setCity(city);
+        w1.setTemperature(5.0);
+        w1.setWindSpeed(2.0);
+        w1.setPhenomenon(null);
+        w1.setTimestamp(t1);
+
+        Weather w2 = new Weather();
+        w2.setCity(city);
+        w2.setTemperature(-2.0);
+        w2.setWindSpeed(2.0);
+        w2.setPhenomenon(null);
+        w2.setTimestamp(t2);
+
+        Weather w3 = new Weather();
+        w3.setCity(city);
+        w3.setTemperature(-15.0);
+        w3.setWindSpeed(2.0);
+        w3.setPhenomenon(null);
+        w3.setTimestamp(t3);
+
+        // mock behavior
+        when(weatherRepository
+                .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(city, t1))
+                .thenReturn(Optional.of(w1));
+
+        when(weatherRepository
+                .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(city, t2))
+                .thenReturn(Optional.of(w2));
+
+        when(weatherRepository
+                .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(city, t3))
+                .thenReturn(Optional.of(w3));
+
+        // execute
+        double fee1 = deliveryFeeService.calculate(city, VehicleType.BIKE, t1);
+        double fee2 = deliveryFeeService.calculate(city, VehicleType.BIKE, t2);
+        double fee3 = deliveryFeeService.calculate(city, VehicleType.BIKE, t3);
+
+        // assert
+        assertEquals(2.5, fee1); // base only
+        assertEquals(3.0, fee2); // +0.5 temp
+        assertEquals(3.5, fee3); // +1.0 temp
     }
 }

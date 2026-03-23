@@ -9,6 +9,8 @@ import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.model.Weather;
 import com.example.deliveryfeeservice.repository.WeatherRepository;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Service
@@ -23,17 +25,33 @@ public class DeliveryFeeService {
         this.weatherRepository = weatherRepository;
     }
 
-    public double calculate(City city, VehicleType vehicle) {
-        Optional<Weather> latestWeatherOpt = weatherRepository.findTopByCityOrderByTimestampDesc(city);
+    public double calculate(City city, VehicleType vehicle, LocalDateTime datetime) {
+        Optional<Weather> weatherOpt;
 
-        Weather latestWeather = latestWeatherOpt
-                .orElseThrow(() -> new WeatherDataNotFoundException("No weather data available for city: " + city));
+        if (datetime != null) {
+            weatherOpt = weatherRepository
+                    .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(city, datetime);
+        } else {
+            weatherOpt = weatherRepository
+                    .findTopByCityOrderByTimestampDesc(city);
+        }
+
+        Weather weather = weatherOpt.orElseThrow(() -> {
+            if (datetime != null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                return new WeatherDataNotFoundException(
+                        "No weather data available before " + datetime.format(formatter) + " for city: " + city);
+            } else {
+                return new WeatherDataNotFoundException(
+                        "No weather data available for city: " + city);
+            }
+        });
 
         double baseFee = getRegionalBaseFee(city, vehicle);
 
-        baseFee += getTemperatureExtraFee(latestWeather, vehicle);
-        baseFee += getWindExtraFee(latestWeather, vehicle);
-        baseFee += getWeatherPhenomenonExtraFee(latestWeather, vehicle);
+        baseFee += getTemperatureExtraFee(weather, vehicle);
+        baseFee += getWindExtraFee(weather, vehicle);
+        baseFee += getWeatherPhenomenonExtraFee(weather, vehicle);
 
         return baseFee;
     }
