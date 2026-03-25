@@ -24,11 +24,17 @@ public class DeliveryFeeService {
 
     private final WeatherRepository weatherRepository;
     private final BaseFeeRuleRepository baseFeeRuleRepository;
+    private final CityService cityService;
+    private final VehicleService vehicleService;
 
     private static final String WIND_FORBIDDEN = "Vehicle usage forbidden due to strong wind";
     private static final String PHENOMENON_FORBIDDEN = "Vehicle usage forbidden due to weather conditions";
 
-    public double calculate(City city, VehicleType vehicle, LocalDateTime datetime) {
+    public double calculate(String cityStr, String vehicleStr, LocalDateTime datetime) {
+
+        City city = cityService.parseCity(cityStr);
+        VehicleType vehicle = vehicleService.parseVehicle(vehicleStr);
+
         Optional<Weather> weatherOpt;
 
         if (datetime != null) {

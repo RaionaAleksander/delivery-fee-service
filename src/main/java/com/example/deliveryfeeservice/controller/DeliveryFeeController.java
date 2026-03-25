@@ -5,11 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
-import com.example.deliveryfeeservice.exception.InvalidVehicleTypeException;
-import com.example.deliveryfeeservice.model.City;
-import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.service.DeliveryFeeService;
-import com.example.deliveryfeeservice.service.CityService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,30 +20,24 @@ import lombok.RequiredArgsConstructor;
 class DeliveryFeeController {
 
     private final DeliveryFeeService deliveryFeeService;
-    private final CityService cityService;
 
-    @Operation(summary = "Calculate delivery fee based on city, vehicle and current weather")
+    @Operation(summary = "Calculate delivery fee", description = "Calculates delivery fee based on city, vehicle type and weather conditions. "
+            +
+            "Optionally, a datetime can be provided to calculate fee based on historical weather data.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Delivery fee calculated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid city or vehicle"),
-            @ApiResponse(responseCode = "403", description = "Vehicle usage forbidden due to weather conditions")
+            @ApiResponse(responseCode = "403", description = "Vehicle usage forbidden due to weather conditions"),
+            @ApiResponse(responseCode = "404", description = "Weather data not found")
     })
     @GetMapping
     double calculateFee(
-            @Parameter(description = "City name (Tallinn, Tartu, Parnu)") @RequestParam String city,
+            @Parameter(description = "City name (Tallinn, Tartu, Parnu)", example = "TALLINN") @RequestParam String city,
 
-            @Parameter(description = "Vehicle type (Car, Scooter, Bike)") @RequestParam String vehicle,
+            @Parameter(description = "Vehicle type (Car, Scooter, Bike)", example = "BIKE") @RequestParam String vehicle,
 
-            @Parameter(description = "Optional datetime (ISO format: 2024-01-10T12:00)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime datetime) {
+            @Parameter(description = "Optional datetime in ISO format (yyyy-MM-ddTHH:mm). If not provided, latest weather data is used", example = "2026-03-26T12:00") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime datetime) {
 
-        City cityEnum = cityService.parseCity(city);
-
-        VehicleType vehicleEnum;
-        try {
-            vehicleEnum = VehicleType.valueOf(vehicle.toUpperCase());
-            return deliveryFeeService.calculate(cityEnum, vehicleEnum, datetime);
-        } catch (IllegalArgumentException e) {
-            throw new InvalidVehicleTypeException("Invalid vehicle type");
-        }
+        return deliveryFeeService.calculate(city, vehicle, datetime);
     }
 }
