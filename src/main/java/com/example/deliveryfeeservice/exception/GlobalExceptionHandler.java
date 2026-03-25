@@ -30,8 +30,11 @@ public class GlobalExceptionHandler {
                 "error", ex.getMessage()));
     }
 
-    @ExceptionHandler(WeatherDataNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(WeatherDataNotFoundException ex) {
+    @ExceptionHandler({
+            WeatherDataNotFoundException.class,
+            BaseFeeRuleNotFoundException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                 "timestamp", LocalDateTime.now(),
                 "status", HttpStatus.NOT_FOUND.value(),

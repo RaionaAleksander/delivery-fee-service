@@ -1,13 +1,16 @@
 package com.example.deliveryfeeservice.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.example.deliveryfeeservice.exception.VehicleForbiddenException;
 import com.example.deliveryfeeservice.exception.WeatherDataNotFoundException;
+import com.example.deliveryfeeservice.model.BaseFeeRule;
 import com.example.deliveryfeeservice.model.City;
 import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.model.Weather;
+import com.example.deliveryfeeservice.repository.BaseFeeRuleRepository;
 import com.example.deliveryfeeservice.repository.WeatherRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +23,45 @@ import java.util.Optional;
 class DeliveryFeeServiceTest {
 
     private WeatherRepository weatherRepository;
+    private BaseFeeRuleRepository baseFeeRuleRepository;
     private DeliveryFeeService deliveryFeeService;
 
     @BeforeEach
     void setup() {
         weatherRepository = mock(WeatherRepository.class);
-        deliveryFeeService = new DeliveryFeeService(weatherRepository);
+        baseFeeRuleRepository = mock(BaseFeeRuleRepository.class);
+        deliveryFeeService = new DeliveryFeeService(weatherRepository, baseFeeRuleRepository);
+
+        when(baseFeeRuleRepository.findByCityAndVehicle(any(), any()))
+                .thenAnswer(invocation -> {
+                    City city = invocation.getArgument(0);
+                    VehicleType vehicle = invocation.getArgument(1);
+
+                    double fee = switch (city) {
+                        case TALLINN -> switch (vehicle) {
+                            case CAR -> 4.0;
+                            case SCOOTER -> 3.5;
+                            case BIKE -> 3.0;
+                        };
+                        case TARTU -> switch (vehicle) {
+                            case CAR -> 3.5;
+                            case SCOOTER -> 3.0;
+                            case BIKE -> 2.5;
+                        };
+                        case PARNU -> switch (vehicle) {
+                            case CAR -> 3.0;
+                            case SCOOTER -> 2.5;
+                            case BIKE -> 2.0;
+                        };
+                    };
+
+                    return Optional.of(
+                            BaseFeeRule.builder()
+                                    .city(city)
+                                    .vehicle(vehicle)
+                                    .fee(fee)
+                                    .build());
+                });
     }
 
     // 1.

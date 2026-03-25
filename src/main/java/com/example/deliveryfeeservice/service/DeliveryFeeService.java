@@ -2,28 +2,31 @@ package com.example.deliveryfeeservice.service;
 
 import org.springframework.stereotype.Service;
 
+import com.example.deliveryfeeservice.exception.BaseFeeRuleNotFoundException;
 import com.example.deliveryfeeservice.exception.VehicleForbiddenException;
 import com.example.deliveryfeeservice.exception.WeatherDataNotFoundException;
+import com.example.deliveryfeeservice.model.BaseFeeRule;
 import com.example.deliveryfeeservice.model.City;
 import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.model.Weather;
+import com.example.deliveryfeeservice.repository.BaseFeeRuleRepository;
 import com.example.deliveryfeeservice.repository.WeatherRepository;
+
+import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class DeliveryFeeService {
 
     private final WeatherRepository weatherRepository;
+    private final BaseFeeRuleRepository baseFeeRuleRepository;
 
     private static final String WIND_FORBIDDEN = "Vehicle usage forbidden due to strong wind";
     private static final String PHENOMENON_FORBIDDEN = "Vehicle usage forbidden due to weather conditions";
-
-    public DeliveryFeeService(WeatherRepository weatherRepository) {
-        this.weatherRepository = weatherRepository;
-    }
 
     public double calculate(City city, VehicleType vehicle, LocalDateTime datetime) {
         Optional<Weather> weatherOpt;
@@ -57,23 +60,10 @@ public class DeliveryFeeService {
     }
 
     private double getRegionalBaseFee(City city, VehicleType vehicle) {
-        return switch (city) {
-            case TALLINN -> switch (vehicle) {
-                case CAR -> 4.0;
-                case SCOOTER -> 3.5;
-                case BIKE -> 3.0;
-            };
-            case TARTU -> switch (vehicle) {
-                case CAR -> 3.5;
-                case SCOOTER -> 3.0;
-                case BIKE -> 2.5;
-            };
-            case PARNU -> switch (vehicle) {
-                case CAR -> 3.0;
-                case SCOOTER -> 2.5;
-                case BIKE -> 2.0;
-            };
-        };
+        return baseFeeRuleRepository.findByCityAndVehicle(city, vehicle)
+                .map(BaseFeeRule::getFee)
+                .orElseThrow(() -> new BaseFeeRuleNotFoundException(
+                        "Base fee rule not found for city: " + city + ", vehicle: " + vehicle));
     }
 
     private double getTemperatureExtraFee(Weather weather, VehicleType vehicle) {
