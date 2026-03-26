@@ -10,11 +10,14 @@ spring:
     driverClassName: 'org.h2.Driver'
     username: 'sa'
     password: ''
+  profiles:
+    active: dev
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true

@@ -11,7 +11,7 @@ public class VehicleService {
         try {
             return VehicleType.valueOf(input.toUpperCase());
         } catch (Exception e) {
-            throw new InvalidVehicleTypeException("Invalid vehicle: " + input);
+            throw new InvalidVehicleTypeException("Invalid vehicle type: " + input);
         }
     }
 }

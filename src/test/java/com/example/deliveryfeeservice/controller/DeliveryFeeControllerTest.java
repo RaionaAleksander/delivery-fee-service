@@ -91,7 +91,7 @@ class DeliveryFeeControllerTest {
                 .param("vehicle", "BIKE"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error")
-                        .value("Invalid city"));
+                        .value("Invalid city: InvalidCity"));
     }
 
     /**
@@ -105,6 +105,6 @@ class DeliveryFeeControllerTest {
                 .param("vehicle", "Plane"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error")
-                        .value("Invalid vehicle type"));
+                        .value("Invalid vehicle type: Plane"));
     }
 }

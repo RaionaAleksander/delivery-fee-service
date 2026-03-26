@@ -12,6 +12,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+    open-in-view: false
 
 logging:
   level:
@@ -22,3 +23,9 @@ weather:
     url: "https://www.ilmateenistus.ee/ilma_andmed/xml/observations.php"
   fetch:
     cron: '0 */5 * * * *'
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

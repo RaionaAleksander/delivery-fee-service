@@ -11,13 +11,13 @@ import com.example.deliveryfeeservice.model.City;
 public class CityService {
     public City parseCity(String input) {
         if (input == null || input.isBlank()) {
-            throw new InvalidCityException("Invalid city");
+            throw new InvalidCityException("City must not be null or blank");
         }
 
         try {
             return City.valueOf(normalize(input));
         } catch (Exception e) {
-            throw new InvalidCityException("Invalid city");
+            throw new InvalidCityException("Invalid city: " + input);
         }
     }
 
