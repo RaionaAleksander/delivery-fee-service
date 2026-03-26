@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class DataInitializer {
+public class BaseFeeDataInitializer {
 
     private final BaseFeeRuleRepository repository;
 

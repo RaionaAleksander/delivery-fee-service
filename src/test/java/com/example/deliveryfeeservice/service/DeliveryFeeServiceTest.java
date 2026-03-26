@@ -8,9 +8,12 @@ import com.example.deliveryfeeservice.exception.VehicleForbiddenException;
 import com.example.deliveryfeeservice.exception.WeatherDataNotFoundException;
 import com.example.deliveryfeeservice.model.BaseFeeRule;
 import com.example.deliveryfeeservice.model.City;
+import com.example.deliveryfeeservice.model.ConditionType;
 import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.model.Weather;
+import com.example.deliveryfeeservice.model.WeatherExtraFeeRule;
 import com.example.deliveryfeeservice.repository.BaseFeeRuleRepository;
+import com.example.deliveryfeeservice.repository.WeatherExtraFeeRuleRepository;
 import com.example.deliveryfeeservice.repository.WeatherRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,19 +21,33 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 
 class DeliveryFeeServiceTest {
 
     private WeatherRepository weatherRepository;
     private BaseFeeRuleRepository baseFeeRuleRepository;
+    private WeatherExtraFeeRuleRepository weatherExtraFeeRuleRepository;
     private DeliveryFeeService deliveryFeeService;
+    private CityService cityService;
+    private VehicleService vehicleService;
 
     @BeforeEach
     void setup() {
         weatherRepository = mock(WeatherRepository.class);
         baseFeeRuleRepository = mock(BaseFeeRuleRepository.class);
-        deliveryFeeService = new DeliveryFeeService(weatherRepository, baseFeeRuleRepository);
+        weatherExtraFeeRuleRepository = mock(WeatherExtraFeeRuleRepository.class);
+
+        cityService = new CityService();
+        vehicleService = new VehicleService();
+
+        deliveryFeeService = new DeliveryFeeService(
+                weatherRepository,
+                baseFeeRuleRepository,
+                weatherExtraFeeRuleRepository,
+                cityService,
+                vehicleService);
 
         when(baseFeeRuleRepository.findByCityAndVehicle(any(), any()))
                 .thenAnswer(invocation -> {
@@ -64,6 +81,71 @@ class DeliveryFeeServiceTest {
                 });
     }
 
+    private WeatherExtraFeeRule rule(
+            ConditionType type,
+            VehicleType vehicle,
+            Double min,
+            Double max,
+            Double fee,
+            Boolean forbidden,
+            String phenomenon) {
+        return WeatherExtraFeeRule.builder()
+                .conditionType(type)
+                .vehicle(vehicle)
+                .minValue(min)
+                .maxValue(max)
+                .extraFee(fee)
+                .forbidden(forbidden)
+                .phenomenon(phenomenon)
+                .build();
+    }
+
+    private List<WeatherExtraFeeRule> temperatureRules(VehicleType vehicle) {
+        return List.of(
+                rule(ConditionType.TEMPERATURE, vehicle, null, -10.0, 1.0, null, null),
+                rule(ConditionType.TEMPERATURE, vehicle, -10.0, 0.0, 0.5, null, null));
+    }
+
+    private List<WeatherExtraFeeRule> windRules() {
+        return List.of(
+                rule(ConditionType.WIND, VehicleType.BIKE, 10.0, 20.0, 0.5, null, null),
+                rule(ConditionType.WIND, VehicleType.BIKE, 20.0, null, null, true, null));
+    }
+
+    private List<WeatherExtraFeeRule> phenomenonRules(VehicleType vehicle) {
+        return List.of(
+                rule(ConditionType.PHENOMENON, vehicle, null, null, 1.0, null, "snow"),
+                rule(ConditionType.PHENOMENON, vehicle, null, null, 1.0, null, "sleet"),
+                rule(ConditionType.PHENOMENON, vehicle, null, null, 0.5, null, "rain"),
+                rule(ConditionType.PHENOMENON, vehicle, null, null, null, true, "glaze"),
+                rule(ConditionType.PHENOMENON, vehicle, null, null, null, true, "hail"),
+                rule(ConditionType.PHENOMENON, vehicle, null, null, null, true, "thunder"));
+    }
+
+    @BeforeEach
+    void setupExtraFees() {
+        when(weatherExtraFeeRuleRepository.findByConditionTypeAndVehicle(any(), any()))
+                .thenAnswer(invocation -> {
+                    ConditionType condition = invocation.getArgument(0);
+                    VehicleType vehicle = invocation.getArgument(1);
+
+                    if (condition == ConditionType.TEMPERATURE
+                            && (vehicle == VehicleType.BIKE || vehicle == VehicleType.SCOOTER)) {
+                        return temperatureRules(vehicle);
+                    }
+
+                    if (condition == ConditionType.WIND && vehicle == VehicleType.BIKE) {
+                        return windRules();
+                    }
+
+                    if (condition == ConditionType.PHENOMENON && vehicle != VehicleType.CAR) {
+                        return phenomenonRules(vehicle);
+                    }
+
+                    return List.of();
+                });
+    }
+
     // 1.
     /**
      * Verifies that the base fee is correctly applied for a bike in Tartu
@@ -81,7 +163,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TARTU))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null);
+        double fee = deliveryFeeService.calculate("TARTU", "BIKE", null);
         assertEquals(2.5, fee);
     }
 
@@ -103,7 +185,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TALLINN))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.SCOOTER, null);
+        double fee = deliveryFeeService.calculate("TALLINN", "SCOOTER", null);
         assertEquals(4.0, fee); // 3.5 base + 0.5 temp
     }
 
@@ -125,7 +207,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.of(weather));
 
         VehicleForbiddenException exception = assertThrows(VehicleForbiddenException.class,
-                () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE, null));
+                () -> deliveryFeeService.calculate("PARNU", "BIKE", null));
         assertEquals("Vehicle usage forbidden due to strong wind", exception.getMessage());
     }
 
@@ -145,7 +227,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TARTU))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null);
+        double fee = deliveryFeeService.calculate("TARTU", "BIKE", null);
         assertEquals(4.0, fee); // 2.5 base + 0.5 temp + 1 snow
     }
 
@@ -166,7 +248,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.TALLINN))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.CAR, null);
+        double fee = deliveryFeeService.calculate("TALLINN", "CAR", null);
 
         assertEquals(4.0, fee);
     }
@@ -187,7 +269,7 @@ class DeliveryFeeServiceTest {
         when(weatherRepository.findTopByCityOrderByTimestampDesc(City.PARNU))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.PARNU, VehicleType.SCOOTER, null);
+        double fee = deliveryFeeService.calculate("PARNU", "SCOOTER", null);
 
         assertEquals(3.0, fee); // 2.5 base + 0.5 rain
     }
@@ -202,7 +284,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(WeatherDataNotFoundException.class,
-                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null));
+                () -> deliveryFeeService.calculate("TARTU", "BIKE", null));
     }
 
     // 8.
@@ -223,7 +305,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.of(weather));
 
         assertThrows(VehicleForbiddenException.class,
-                () -> deliveryFeeService.calculate(City.TALLINN, VehicleType.SCOOTER, null));
+                () -> deliveryFeeService.calculate("TALLINN", "SCOOTER", null));
     }
 
     // 9.
@@ -243,7 +325,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.of(weather));
 
         assertThrows(VehicleForbiddenException.class,
-                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, null));
+                () -> deliveryFeeService.calculate("TARTU", "BIKE", null));
     }
 
     // 10.
@@ -264,7 +346,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.of(weather));
 
         assertThrows(VehicleForbiddenException.class,
-                () -> deliveryFeeService.calculate(City.PARNU, VehicleType.BIKE, null));
+                () -> deliveryFeeService.calculate("PARNU", "BIKE", null));
     }
 
     // 11.
@@ -287,7 +369,7 @@ class DeliveryFeeServiceTest {
                 .findTopByCityAndTimestampLessThanEqualOrderByTimestampDesc(City.TALLINN, time))
                 .thenReturn(Optional.of(weather));
 
-        double fee = deliveryFeeService.calculate(City.TALLINN, VehicleType.CAR, time);
+        double fee = deliveryFeeService.calculate("TALLINN", "CAR", time);
 
         assertEquals(4.0, fee); // base only
 
@@ -309,7 +391,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(WeatherDataNotFoundException.class,
-                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, time));
+                () -> deliveryFeeService.calculate("TARTU", "BIKE", time));
     }
 
     // 13.
@@ -326,7 +408,7 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.empty());
 
         Exception ex = assertThrows(WeatherDataNotFoundException.class,
-                () -> deliveryFeeService.calculate(City.TARTU, VehicleType.BIKE, time));
+                () -> deliveryFeeService.calculate("TARTU", "BIKE", time));
 
         String expectedDate = time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         assertTrue(ex.getMessage().contains("before " + expectedDate));
@@ -381,9 +463,9 @@ class DeliveryFeeServiceTest {
                 .thenReturn(Optional.of(w3));
 
         // execute
-        double fee1 = deliveryFeeService.calculate(city, VehicleType.BIKE, t1);
-        double fee2 = deliveryFeeService.calculate(city, VehicleType.BIKE, t2);
-        double fee3 = deliveryFeeService.calculate(city, VehicleType.BIKE, t3);
+        double fee1 = deliveryFeeService.calculate("TARTU", "BIKE", t1);
+        double fee2 = deliveryFeeService.calculate("TARTU", "BIKE", t2);
+        double fee3 = deliveryFeeService.calculate("TARTU", "BIKE", t3);
 
         // assert
         assertEquals(2.5, fee1); // base only

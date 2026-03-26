@@ -1,5 +1,10 @@
 package com.example.deliveryfeeservice.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
 import com.example.deliveryfeeservice.exception.BaseFeeRuleNotFoundException;
@@ -7,16 +12,15 @@ import com.example.deliveryfeeservice.exception.VehicleForbiddenException;
 import com.example.deliveryfeeservice.exception.WeatherDataNotFoundException;
 import com.example.deliveryfeeservice.model.BaseFeeRule;
 import com.example.deliveryfeeservice.model.City;
+import com.example.deliveryfeeservice.model.ConditionType;
 import com.example.deliveryfeeservice.model.VehicleType;
 import com.example.deliveryfeeservice.model.Weather;
+import com.example.deliveryfeeservice.model.WeatherExtraFeeRule;
 import com.example.deliveryfeeservice.repository.BaseFeeRuleRepository;
+import com.example.deliveryfeeservice.repository.WeatherExtraFeeRuleRepository;
 import com.example.deliveryfeeservice.repository.WeatherRepository;
 
 import lombok.RequiredArgsConstructor;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,7 @@ public class DeliveryFeeService {
 
     private final WeatherRepository weatherRepository;
     private final BaseFeeRuleRepository baseFeeRuleRepository;
+    private final WeatherExtraFeeRuleRepository weatherExtraFeeRuleRepository;
     private final CityService cityService;
     private final VehicleService vehicleService;
 
@@ -77,11 +82,23 @@ public class DeliveryFeeService {
             return 0.0;
 
         double temp = weather.getTemperature();
-        if (temp < -10)
-            return 1.0;
-        if (temp <= 0)
-            return 0.5;
-        return 0.0;
+
+        List<WeatherExtraFeeRule> rules = weatherExtraFeeRuleRepository.findByConditionTypeAndVehicle(
+                ConditionType.TEMPERATURE, vehicle);
+
+        double extraFee = 0.0;
+
+        for (WeatherExtraFeeRule rule : rules) {
+
+            boolean matchesMin = rule.getMinValue() == null || temp >= rule.getMinValue();
+            boolean matchesMax = rule.getMaxValue() == null || temp <= rule.getMaxValue();
+
+            if (matchesMin && matchesMax) {
+                extraFee += rule.getExtraFee() != null ? rule.getExtraFee() : 0.0;
+            }
+        }
+
+        return extraFee;
     }
 
     private double getWindExtraFee(Weather weather, VehicleType vehicle) {
@@ -89,11 +106,28 @@ public class DeliveryFeeService {
             return 0.0;
 
         double wind = weather.getWindSpeed();
-        if (wind > 20)
-            throw new VehicleForbiddenException(WIND_FORBIDDEN);
-        if (wind >= 10)
-            return 0.5;
-        return 0.0;
+
+        List<WeatherExtraFeeRule> rules = weatherExtraFeeRuleRepository.findByConditionTypeAndVehicle(
+                ConditionType.WIND, vehicle);
+
+        double extraFee = 0.0;
+
+        for (WeatherExtraFeeRule rule : rules) {
+
+            boolean matchesMin = rule.getMinValue() == null || wind >= rule.getMinValue();
+            boolean matchesMax = rule.getMaxValue() == null || wind <= rule.getMaxValue();
+
+            if (matchesMin && matchesMax) {
+                if (Boolean.TRUE.equals(rule.getForbidden())) {
+                    throw new VehicleForbiddenException(WIND_FORBIDDEN);
+                }
+                if (rule.getExtraFee() != null) {
+                    extraFee += rule.getExtraFee();
+                }
+            }
+        }
+
+        return extraFee;
     }
 
     private double getWeatherPhenomenonExtraFee(Weather weather, VehicleType vehicle) {
@@ -105,13 +139,32 @@ public class DeliveryFeeService {
             return 0.0;
 
         String p = phenomenon.toLowerCase();
-        if (p.contains("glaze") || p.contains("hail") || p.contains("thunder")) {
-            throw new VehicleForbiddenException(PHENOMENON_FORBIDDEN);
+
+        List<WeatherExtraFeeRule> rules = weatherExtraFeeRuleRepository.findByConditionTypeAndVehicle(
+                ConditionType.PHENOMENON, vehicle);
+
+        double extraFee = 0.0;
+
+        for (WeatherExtraFeeRule rule : rules) {
+
+            if (rule.getPhenomenon() == null || rule.getPhenomenon().isBlank()) {
+                continue;
+            }
+
+            String rulePhenomenon = rule.getPhenomenon().toLowerCase();
+
+            if (p.contains(rulePhenomenon)) {
+
+                if (Boolean.TRUE.equals(rule.getForbidden())) {
+                    throw new VehicleForbiddenException(PHENOMENON_FORBIDDEN);
+                }
+
+                if (rule.getExtraFee() != null) {
+                    extraFee += rule.getExtraFee();
+                }
+            }
         }
-        if (p.contains("snow") || p.contains("sleet"))
-            return 1.0;
-        if (p.contains("rain"))
-            return 0.5;
-        return 0.0;
+
+        return extraFee;
     }
 }

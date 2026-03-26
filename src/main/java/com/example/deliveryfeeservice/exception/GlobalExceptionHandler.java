@@ -21,7 +21,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             InvalidCityException.class,
-            InvalidVehicleTypeException.class
+            InvalidVehicleTypeException.class,
+            InvalidConditionTypeException.class
     })
     public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
