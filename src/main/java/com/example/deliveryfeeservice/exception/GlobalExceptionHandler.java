@@ -22,7 +22,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             InvalidCityException.class,
             InvalidVehicleTypeException.class,
-            InvalidConditionTypeException.class
+            InvalidConditionTypeException.class,
+            InvalidWeatherExtraFeeRuleException.class,
+            InvalidActionTypeException.class
     })
     public ResponseEntity<Map<String, Object>> handleBadRequest(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
@@ -33,7 +35,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             WeatherDataNotFoundException.class,
-            BaseFeeRuleNotFoundException.class
+            BaseFeeRuleNotFoundException.class,
+            WeatherExtraFeeRuleNotFoundException.class,
     })
     public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
