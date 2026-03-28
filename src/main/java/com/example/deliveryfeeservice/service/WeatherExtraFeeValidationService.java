@@ -74,7 +74,7 @@ public class WeatherExtraFeeValidationService {
 
     // ------------------- RANGE -------------------
 
-    private void validateMinMax(Double min, Double max) {
+    public void validateMinMax(Double min, Double max) {
         if (min == null && max == null) {
             throw new InvalidWeatherExtraFeeRuleException("At least one of minValue or maxValue must be provided");
         }
@@ -118,5 +118,30 @@ public class WeatherExtraFeeValidationService {
         double bMax = max2 != null ? max2 : Double.POSITIVE_INFINITY;
 
         return aMin < bMax && bMin < aMax;
+    }
+
+    // ------------------- PHENOMENON / TEMPERATURE or WIND -------------------
+
+    public void validatePhenomenonFields(String phenomenon, Double min, Double max) {
+
+        if (phenomenon == null || phenomenon.isBlank()) {
+            throw new InvalidWeatherExtraFeeRuleException(
+                    "Phenomenon must be provided for PHENOMENON condition");
+        }
+
+        if (min != null || max != null) {
+            throw new InvalidWeatherExtraFeeRuleException(
+                    "minValue and maxValue must be null for PHENOMENON condition");
+        }
+    }
+
+    public void validateRangeFields(String phenomenon, Double min, Double max) {
+
+        if (phenomenon != null && !phenomenon.isBlank()) {
+            throw new InvalidWeatherExtraFeeRuleException(
+                    "Phenomenon must be null for TEMPERATURE and WIND conditions");
+        }
+
+        validateMinMax(min, max);
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.deliveryfeeservice.dto.CreatePhenomenonRuleRequest;
 import com.example.deliveryfeeservice.dto.CreateRangeRuleRequest;
+import com.example.deliveryfeeservice.dto.UpdateWeatherExtraFeeRuleRequest;
 import com.example.deliveryfeeservice.dto.WeatherExtraFeeRuleResponse;
 import com.example.deliveryfeeservice.exception.WeatherExtraFeeRuleNotFoundException;
 import com.example.deliveryfeeservice.model.ConditionType;
@@ -109,6 +110,58 @@ public class WeatherExtraFeeRuleService {
         rule.setVehicle(vehicle);
         rule.setPhenomenon(request.getPhenomenon());
 
+        if (actionType == RuleActionType.FEE) {
+            rule.setExtraFee(request.getExtraFee());
+            rule.setForbidden(null);
+        } else {
+            rule.setExtraFee(null);
+            rule.setForbidden(true);
+        }
+
+        repository.save(rule);
+    }
+
+    public void updateRule(Long id, UpdateWeatherExtraFeeRuleRequest request) {
+        WeatherExtraFeeRule rule = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Rule not found with id: " + id));
+
+        ConditionType condition = conditionTypeService.parseCondition(request.getConditionType());
+        VehicleType vehicle = vehicleService.parseVehicle(request.getVehicle());
+
+        RuleActionType actionType = actionTypeService.parseActionType(request.getActionType());
+
+        Double min = request.getMinValue();
+        Double max = request.getMaxValue();
+        String phenomenon = request.getPhenomenon();
+        if (condition == ConditionType.PHENOMENON) {
+            validationService.validatePhenomenonFields(phenomenon, min, max);
+
+            rule.setMinValue(null);
+            rule.setMaxValue(null);
+            rule.setPhenomenon(phenomenon);
+        } else {
+            validationService.validateRangeFields(phenomenon, min,
+                    max);
+
+            List<WeatherExtraFeeRule> existing = repository.findByConditionTypeAndVehicle(condition, vehicle)
+                    .stream()
+                    .filter(r -> !r.getId().equals(id))
+                    .toList();
+
+            validationService.validateNoOverlap(
+                    existing,
+                    min,
+                    max);
+
+            rule.setPhenomenon(null);
+            rule.setMinValue(min);
+            rule.setMaxValue(max);
+        }
+
+        rule.setConditionType(condition);
+        rule.setVehicle(vehicle);
+
+        validationService.validateAction(actionType, request.getExtraFee());
         if (actionType == RuleActionType.FEE) {
             rule.setExtraFee(request.getExtraFee());
             rule.setForbidden(null);

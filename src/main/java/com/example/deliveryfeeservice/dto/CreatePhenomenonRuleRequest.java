@@ -1,7 +1,5 @@
 package com.example.deliveryfeeservice.dto;
 
-import com.example.deliveryfeeservice.model.RuleActionType;
-
 import lombok.Data;
 
 @Data
