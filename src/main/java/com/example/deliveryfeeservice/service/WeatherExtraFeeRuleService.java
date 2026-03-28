@@ -51,13 +51,14 @@ public class WeatherExtraFeeRuleService {
 
     private WeatherExtraFeeRuleResponse toResponse(WeatherExtraFeeRule rule) {
         return WeatherExtraFeeRuleResponse.builder()
+                .id(rule.getId())
                 .conditionType(rule.getConditionType().name())
                 .vehicle(rule.getVehicle().name())
                 .minValue(rule.getMinValue())
                 .maxValue(rule.getMaxValue())
                 .phenomenon(rule.getPhenomenon())
                 .extraFee(rule.getExtraFee())
-                .forbidden(rule.getForbidden())
+                .forbidden(Boolean.TRUE.equals(rule.getForbidden()))
                 .build();
     }
 

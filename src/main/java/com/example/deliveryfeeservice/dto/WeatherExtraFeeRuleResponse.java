@@ -9,6 +9,7 @@ import lombok.Data;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class WeatherExtraFeeRuleResponse {
+    private Long id;
 
     private String conditionType;
     private String vehicle;
